@@ -5,5 +5,8 @@ components/redis
 components/mongodb
 components/minio
 
+# 日志
+components/openim/logs
+
 # 配置
 .env
