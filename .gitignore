@@ -1,0 +1,9 @@
+# 组件生成的文件
+components/elasticsearch/certs
+components/mysql
+components/redis
+components/mongodb
+components/minio
+
+# 配置
+.env

@@ -1,0 +1,9 @@
+# Ignore files and directories starting with a dot
+
+# Ignore specific files
+.dockerignore
+
+# Ignore deployment-related files
+docker-compose.yaml
+
+# Ignore source code

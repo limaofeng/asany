@@ -1,0 +1,464 @@
+version: '3.3'
+  
+services:
+
+  # setup:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+  #   volumes:
+  #     - ${DATA_DIR}/components/elasticsearch/certs:/usr/share/elasticsearch/config/certs
+  #     # - ${DATA_DIR}/components/openim/config:/usr/share/openim/config
+  #     # - ./.env:/usr/share/openim/env_file
+  #   user: "0"
+  #   command: >
+  #     bash -c '
+  #       # source /usr/share/openim/env_file && envsubst < /usr/share/openim/config/config.template.yaml > /usr/share/openim/config/config.yaml
+  #       if [ x${ELASTIC_PASSWORD} == x ]; then
+  #         echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
+  #         exit 1;
+  #       elif [ x${KIBANA_PASSWORD} == x ]; then
+  #         echo "Set the KIBANA_PASSWORD environment variable in the .env file";
+  #         exit 1;
+  #       fi;
+  #       if [ ! -f certs/ca.zip ]; then
+  #         echo "Creating CA";
+  #         bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+  #         unzip config/certs/ca.zip -d config/certs;
+  #       fi;
+  #       if [ ! -f certs/certs.zip ]; then
+  #         echo "Creating certs";
+  #         echo -ne \
+  #         "instances:\n"\
+  #         "  - name: es01\n"\
+  #         "    dns:\n"\
+  #         "      - es01\n"\
+  #         "      - localhost\n"\
+  #         "      - es.asany.cn\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         "  - name: es02\n"\
+  #         "    dns:\n"\
+  #         "      - es02\n"\
+  #         "      - localhost\n"\
+  #         "      - es.asany.cn\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         "  - name: es03\n"\
+  #         "    dns:\n"\
+  #         "      - es03\n"\
+  #         "      - localhost\n"\
+  #         "      - es.asany.cn\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         > config/certs/instances.yml;
+  #         bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+  #         unzip config/certs/certs.zip -d config/certs;
+  #       fi;
+  #       echo "Setting file permissions"
+  #       chown -R root:root config/certs;
+  #       find . -type d -exec chmod 750 \{\} \;;
+  #       find . -type f -exec chmod 640 \{\} \;;
+  #       echo "Waiting for Elasticsearch availability";
+  #       until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+  #       echo "Setting kibana_system password";
+  #       until curl -s -X POST --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+  #       echo "All done!";
+  #     '
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
+  #     interval: 1s
+  #     timeout: 5s
+  #     retries: 120
+ 
+  # es01:
+  #   depends_on:
+  #     setup:
+  #       condition: service_healthy
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+  #   volumes:
+  #     - ${DATA_DIR}/components/elasticsearch/certs:/usr/share/elasticsearch/config/certs
+  #     - esdata01:/usr/share/elasticsearch/data
+  #     - ${DATA_DIR}/components/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+  #   ports:
+  #     - ${ES_PORT}:9200
+  #   environment:
+  #     - node.name=es01
+  #     - cluster.name=${CLUSTER_NAME}
+  #     - cluster.initial_master_nodes=es01,es02,es03
+  #     - discovery.seed_hosts=es02,es03
+  #     - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+  #     - bootstrap.memory_lock=true
+  #     - xpack.security.enabled=true
+  #     - xpack.security.http.ssl.enabled=true
+  #     - xpack.security.http.ssl.key=certs/es01/es01.key
+  #     - xpack.security.http.ssl.certificate=certs/es01/es01.crt
+  #     - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+  #     - xpack.security.http.ssl.verification_mode=certificate
+  #     - xpack.security.transport.ssl.enabled=true
+  #     - xpack.security.transport.ssl.key=certs/es01/es01.key
+  #     - xpack.security.transport.ssl.certificate=certs/es01/es01.crt
+  #     - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+  #     - xpack.security.transport.ssl.verification_mode=certificate
+  #     - xpack.license.self_generated.type=${LICENSE}
+  #   mem_limit: ${MEM_LIMIT}
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD-SHELL",
+  #         "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+  #       ]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 120
+ 
+  # es02:
+  #   depends_on:
+  #     - es01
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+  #   volumes:
+  #     - ${DATA_DIR}/components/elasticsearch/certs:/usr/share/elasticsearch/config/certs
+  #     - esdata02:/usr/share/elasticsearch/data
+  #     - ${DATA_DIR}/components/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+  #   environment:
+  #     - node.name=es02
+  #     - cluster.name=${CLUSTER_NAME}
+  #     - cluster.initial_master_nodes=es01,es02,es03
+  #     - discovery.seed_hosts=es01,es03
+  #     - bootstrap.memory_lock=true
+  #     - xpack.security.enabled=true
+  #     - xpack.security.http.ssl.enabled=true
+  #     - xpack.security.http.ssl.key=certs/es02/es02.key
+  #     - xpack.security.http.ssl.certificate=certs/es02/es02.crt
+  #     - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+  #     - xpack.security.http.ssl.verification_mode=certificate
+  #     - xpack.security.transport.ssl.enabled=true
+  #     - xpack.security.transport.ssl.key=certs/es02/es02.key
+  #     - xpack.security.transport.ssl.certificate=certs/es02/es02.crt
+  #     - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+  #     - xpack.security.transport.ssl.verification_mode=certificate
+  #     - xpack.license.self_generated.type=${LICENSE}
+  #   mem_limit: ${MEM_LIMIT}
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD-SHELL",
+  #         "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+  #       ]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 120
+ 
+  # es03:
+  #   depends_on:
+  #     - es02
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+  #   volumes:
+  #     - ${DATA_DIR}/components/elasticsearch/certs:/usr/share/elasticsearch/config/certs
+  #     - esdata03:/usr/share/elasticsearch/data
+  #     - ${DATA_DIR}/components/elasticsearch/plugins:/usr/share/elasticsearch/plugins
+  #   environment:
+  #     - node.name=es03
+  #     - cluster.name=${CLUSTER_NAME}
+  #     - cluster.initial_master_nodes=es01,es02,es03
+  #     - discovery.seed_hosts=es01,es02
+  #     - bootstrap.memory_lock=true
+  #     - xpack.security.enabled=true
+  #     - xpack.security.http.ssl.enabled=true
+  #     - xpack.security.http.ssl.key=certs/es03/es03.key
+  #     - xpack.security.http.ssl.certificate=certs/es03/es03.crt
+  #     - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+  #     - xpack.security.http.ssl.verification_mode=certificate
+  #     - xpack.security.transport.ssl.enabled=true
+  #     - xpack.security.transport.ssl.key=certs/es03/es03.key
+  #     - xpack.security.transport.ssl.certificate=certs/es03/es03.crt
+  #     - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+  #     - xpack.security.transport.ssl.verification_mode=certificate
+  #     - xpack.license.self_generated.type=${LICENSE}
+  #   mem_limit: ${MEM_LIMIT}
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD-SHELL",
+  #         "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+  #       ]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 120
+ 
+  # kibana:
+  #   depends_on:
+  #     es01:
+  #       condition: service_healthy
+  #     es02:
+  #       condition: service_healthy
+  #     es03:
+  #       condition: service_healthy
+  #   image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+  #   volumes:
+  #     - ${DATA_DIR}/components/elasticsearch/kibana.yml:/usr/share/kibana/config/kibana.yml
+  #     - ${DATA_DIR}/components/elasticsearch/certs:/usr/share/kibana/config/certs
+  #     - kibanadata:/usr/share/kibana/data
+  #   ports:
+  #     - ${KIBANA_PORT}:5601
+  #   environment:
+  #     - SERVERNAME=kibana
+  #     - ELASTICSEARCH_HOSTS=https://es01:9200
+  #     - ELASTICSEARCH_USERNAME=kibana_system
+  #     - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+  #     - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+  #   mem_limit: ${MEM_LIMIT}
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD-SHELL",
+  #         "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+  #       ]
+  #     interval: 10s
+  #     timeout: 10s
+  #     retries: 120
+
+  mysql:
+    image: mysql:5.7
+    ports:
+      - 13306:3306
+      - 23306:33060
+    container_name: mysql
+    volumes:
+      - ${DATA_DIR}/components/mysql:/var/lib/mysql
+      - /etc/localtime:/etc/localtime
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
+    restart: always
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --lower_case_table_names=1
+
+  mongodb:
+    image: mongo:6.0.2
+    ports:
+      - 37017:27017
+    container_name: mongo
+    command: --wiredTigerCacheSizeGB 1 --auth
+    volumes:
+      - ${DATA_DIR}/components/mongodb/db:/data/db
+      - ${DATA_DIR}/components/mongodb/logs:/data/logs
+      - ${DATA_DIR}/components/mongodb/conf:/etc/mongo
+      - ${DATA_DIR}/components/openim/scripts/mongo-init.sh:/docker-entrypoint-initdb.d/mongo-init.sh:ro
+    environment:
+      - TZ=Asia/Shanghai
+      # cache
+      - wiredTigerCacheSizeGB=1
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_INITDB_DATABASE=openIM
+      - MONGO_USERNAME=${MONGO_USER}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+    restart: always
+
+  redis:
+    image: redis:7.0.0
+    ports:
+      - 16379:6379
+    container_name: redis
+    volumes:
+      - ${DATA_DIR}/components/redis/data:/data
+      #redis config file
+      - ${DATA_DIR}/components/redis/config/redis.conf:/usr/local/redis/config/redis.conf
+    environment:
+      TZ: Asia/Shanghai
+    restart: always
+    sysctls:
+      net.core.somaxconn: 1024
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - 2181:2181
+    container_name: zookeeper
+    volumes:
+      - /etc/localtime:/etc/localtime
+    environment:
+      TZ: Asia/Shanghai
+    restart: always
+
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka
+    restart: always
+    ports:
+      - 9092:9092
+    environment:
+      TZ: Asia/Shanghai
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS: "latestMsgToRedis:8:1,msgToPush:8:1,offlineMsgToMongoMysql:8:1"
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://127.0.0.1:9092,OUTSIDE://103.116.45.174:9092
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+    depends_on:
+      - zookeeper
+
+  minio:
+    image: minio/minio
+    ports:
+      - 10005:9000
+      - 9090:9090
+    container_name: minio
+    volumes:
+      - ${DATA_DIR}/components/minio/data:/data
+      - ${DATA_DIR}/components/minio/config:/root/.minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    restart: always
+    command: minio server /data --console-address ':9090'
+
+  openim_server:
+    image: ghcr.io/openimsdk/openim-server:v3.1.0
+    container_name: openim-server
+    volumes:
+      - ${DATA_DIR}/components/openim/logs:/Open-IM-Server/logs
+      - ${DATA_DIR}/components/openim/config/config.yaml:/Open-IM-Server/config/config.yaml
+      - ${DATA_DIR}/components/openim/config/notification.yaml:/Open-IM-Server/config/notification.yaml
+      - ${DATA_DIR}/components/openim/db/sdk:/Open-IM-Server/db/sdk
+      - ${DATA_DIR}/components/openim/scripts:/Open-IM-Server/scripts
+    restart: always
+    depends_on:
+      - zookeeper
+      - kafka
+      - mysql
+      - mongodb
+      - redis
+      - minio
+    network_mode: "host"
+    logging:
+      driver: json-file
+      options:
+        max-size: "1g"
+        max-file: "2"
+
+  openim_chat:
+    image: ghcr.io/openimsdk/openim-chat:v1.1.0
+    container_name: openim_chat
+    restart: always
+    depends_on:
+      - mysql
+      - mongodb
+      - redis
+      - minio
+      - openim_server
+    network_mode: "host"
+    logging:
+      driver: json-file
+      options:
+        max-size: "1g"
+        max-file: "2"
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ${DATA_DIR}/components/prometheus/prometheus-compose.yml:/etc/prometheus/prometheus.yml
+    container_name: prometheus
+    #    ports:
+    #    - 9091:9091
+    depends_on:
+    - openim_server
+    command: --web.listen-address=:9091 --config.file="/etc/prometheus/prometheus.yml"
+    network_mode: "host"
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - ${DATA_DIR}/components/grafana/datasource-compose.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ${DATA_DIR}/components/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ${DATA_DIR}/components/grafana/node-exporter-full_rev1.json:/var/lib/grafana/dashboards/node-exporter-full_rev1.json
+    container_name: grafana
+    depends_on:
+      - prometheus
+    network_mode: "host"
+
+  # admin:
+  #   image: 'limaofeng/asany-admin:v0.2.38'
+  #   environment:
+  #     VIRTUAL_HOST: admin.app.asany.cn
+  #     VIRTUAL_PORT: 80
+  #     LETSENCRYPT_HOST: admin.app.asany.cn
+  #   restart: always
+  #   networks:
+  #     - default
+  #     - nginx
+  # web:
+  #   image: 'limaofeng/asany-web:v0.2.25'
+  #   environment:
+  #     VIRTUAL_HOST: hotsoon.app.asany.cn
+  #     VIRTUAL_PORT: 80
+  #     LETSENCRYPT_HOST: hotsoon.app.asany.cn
+  #   restart: always
+  #   networks:
+  #     - default
+  #     - nginx
+  
+  # server:
+  #   depends_on:
+  #     - db
+  #     - redis
+  #   links:
+  #     - db
+  #     - redis
+  #   image: 'limaofeng/asany-server:v0.2.6'
+  #   ports:
+  #     - '8080:8080'
+  #     - '143:143'
+  #     - '25:25'
+  #   restart: always
+  #   environment:
+  #     spring.profiles.active: prod
+  #     DATABASE_USERNAME: root
+  #     REDIS_HOST: redis
+  #     REDIS_PASSWORD: sOmE_sEcUrE_pAsS
+  #     DATABASE_PASSWORD: yV2jJxvNs8BD
+  #     DATABASE_INSTANCE_NAME: sunmao
+  #     DATABASE_HOST: db
+  #     VIRTUAL_HOST: api.asany.cn
+  #     VIRTUAL_PORT: 8080
+  #     LETSENCRYPT_HOST: api.asany.cn
+  #     OPENIM_SERVER: http://47.103.119.188:10002 
+  #     OPENIM_SECRET: tuoyun
+  #     OPENIM_ADMIN: openIMAdmin
+  #     ALIYUN_ACCESSKEY_ID: LTAI5tC4bM3eqj4DtrSA24QY
+  #     ALIYUN_ACCESSKEY_SECRET: g9wydV4sjRJHYiKkmNoCqNkpDDik6O 
+  #   networks:
+  #     - default
+  #     - nginx
+  #  - ${DATA_DIR}/components/elasticsearch/certs:/usr/share/elasticsearch/config/certs
+
+volumes:
+  esdata01:
+    driver: local
+  esdata02:
+    driver: local
+  esdata03:
+    driver: local
+  kibanadata:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
+  nginx:
+    name: nginx_default
+    external: true
+      
