@@ -4,6 +4,7 @@ components/mysql
 components/redis
 components/mongodb
 components/minio
+components/openim/openim-chat/logs
 
 # 日志
 components/openim/logs

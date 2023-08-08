@@ -25,7 +25,7 @@
 # Zookeeper password
 zookeeper:
   schema: openim                          
-  address: [ 127.0.0.1:2181 ]            
+  address: [ zookeeper:2181 ]            
   username:                               
   password:   
 
@@ -39,7 +39,7 @@ zookeeper:
 # Log level: 1=slient, 2=error, 3=warn, 4=info
 # Slow query threshold in milliseconds
 mysql:
-  address: [ 127.0.0.1:13306 ]
+  address: [ mysql:3306 ]
   username: root
   password: 4466KWVGjayXVXft
   database: openIM_v3
@@ -58,7 +58,7 @@ mysql:
 # Maximum connection pool size
 mongo:
   uri:
-  address: [ 127.0.0.1:37017 ]
+  address: [ mongodb:27017 ]
   database: openIM_v3
   username: root
   password: LJKREc26A2BgziHW
@@ -69,7 +69,7 @@ mongo:
 #
 # Username is required only for Redis version 6.0+
 redis:
-  address: [ 127.0.0.1:16379 ]
+  address: [ redis:6379 ]
   username:               
   password: AGtVAm6GKHTPaJNK
 
@@ -83,7 +83,7 @@ redis:
 kafka:
   username:                               
   password:                               
-  addr: [ 127.0.0.1:9092 ]
+  addr: [ kafka:9092 ]
   latestMsgToRedis:
     topic: "latestMsgToRedis"             
   offlineMsgToMongo:
@@ -129,7 +129,7 @@ object:
   apiURL: http://127.0.0.1:10002/object/
   minio:
     bucket: "openim"                      
-    endpoint: http://127.0.0.1:10005
+    endpoint: http://127.0.0.1:9000
     accessKeyID: root
     secretAccessKey: 2dvAKLeKKBHFepfs
     sessionToken: ""
